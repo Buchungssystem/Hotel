@@ -1,6 +1,6 @@
-package main.java.org.hotel;
+package org.hotel;
 
-import main.java.org.utils.Participant;
+import org.utils.Participant;
 
 public class Hotel extends Participant {
 
