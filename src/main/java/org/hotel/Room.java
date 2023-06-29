@@ -1,8 +1,15 @@
 package org.hotel;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 
 public class Room {
+    @JsonProperty("id")
     private int id;
+
+    @JsonProperty("name")
     private String name;
+
+    @JsonProperty("price")
     private double price;
 
     public Room(int pId, String pName, double pPrice){

@@ -1,7 +1,11 @@
 package org.hotel;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.utils.Operations;
 import org.utils.Participant;
-import org.utils.VoteOptions;
+import org.utils.SendingInformation;
+import org.utils.UDPMessage;
+import org.utils.Operations;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -10,12 +14,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.UUID;
 
 public class Hotel extends Participant {
 
     @Override
-    public VoteOptions Vote() {
-        return VoteOptions.ABORT;
+    public Operations Vote() {
+        return Operations.ABORT;
     }
 
     @Override
@@ -24,10 +29,13 @@ public class Hotel extends Participant {
     }
 
     @Override
-    public void getAvailableItems(LocalDate startDate, LocalDate endDate) {
+    public byte[] getAvailableItems(LocalDate startDate, LocalDate endDate, UUID pTransaktionnumber) {
         DatabaseConnection dbConn = new DatabaseConnection();
-        ArrayList<String> availableRooms = new ArrayList<>();
+        ArrayList<String> availableRoomIds = new ArrayList<>();
         ResultSet rs = null;
+        ObjectMapper objectMapper = new ObjectMapper();
+        UDPMessage udpMessage;
+        byte[] data;
         try(Connection con = dbConn.getConn()){
             PreparedStatement stm = con.prepareStatement("SELECT * FROM booking");
             rs = stm.executeQuery();
@@ -36,50 +44,48 @@ public class Hotel extends Participant {
                 LocalDate startDateEntry = LocalDate.parse(rs.getString("startDate"));
                 LocalDate endDateEntry = LocalDate.parse(rs.getString("endDate"));
                 if (startDateEntry.isAfter(endDate) | endDateEntry.isBefore(startDate)) {
-                    availableRooms.add(rs.getString("roomId"));
+                    availableRoomIds.add(rs.getString("roomId"));
                 }
             }
             String availableRoomsIds = "";
-            for (int i = 0; i < availableRooms.size(); i++) {
-                if( i < availableRooms.size() - 1){
-                    availableRoomsIds += availableRooms.get(i) + ", ";
+            for (int i = 0; i < availableRoomIds.size(); i++) {
+                if( i < availableRoomIds.size() - 1){
+                    availableRoomsIds += availableRoomIds.get(i) + ", ";
                 }else{
-                    availableRoomsIds += availableRooms.get(i);
+                    availableRoomsIds += availableRoomIds.get(i);
                 }
             }
 
             stm = con.prepareStatement("SELECT * FROM room WHERE id IN (?)");
             stm.setString(1, availableRoomsIds);
             rs = stm.executeQuery();
-
+            ArrayList<Room> availableRooms = new ArrayList<>();
             while(rs.next()){
-                System.out.println("ID:" + rs.getString("id") +
-                                    "\nName: " + rs.getString("name"));
+                availableRooms.add(new Room(rs.getInt("id"), rs.getString("name"), rs.getDouble("price")));
             }
 
+            data = objectMapper.writeValueAsBytes(availableRooms);
+            udpMessage = new UDPMessage(pTransaktionnumber, data, SendingInformation.HOTEL, Operations.AVAILIBILITY);
+
+            return objectMapper.writeValueAsBytes(udpMessage);
+
         }catch(Exception e){
-            System.out.println("Something went wrong with the DB-Query.");
+            String errorMessage = "Something went wrong:\n" + e.getMessage();
+            byte[] res;
+            try {
+                data = objectMapper.writeValueAsBytes(errorMessage);
+                udpMessage = new UDPMessage(pTransaktionnumber, data, SendingInformation.HOTEL, Operations.AVAILIBILITY);
+                res = objectMapper.writeValueAsBytes(udpMessage);
+            }catch (com.fasterxml.jackson.core.JsonProcessingException er){
+                return errorMessage.getBytes();
+            }
+
+            return res;
         }
-
-
     }
 
     public static void main(String[] args) {
-        Hotel h = new Hotel();
-        LocalDate startDate = LocalDate.of(2023, 8, 1);
-        LocalDate endDate = LocalDate.of(2023, 8, 14);
-        h.getAvailableItems(startDate, endDate);
-        /*while (true) {
-            try (DatagramSocket dgSocket = new DatagramSocket(4445)) {
-                byte[] buffer = new byte[65507];
-                DatagramPacket dgPacket = new DatagramPacket(buffer, buffer.length);
-                System.out.println("Listening on Port 4445..");
-                dgSocket.receive(dgPacket);
-                String data = new String(dgPacket.getData(), 0, dgPacket.getLength());
-                System.out.println(data);
-            } catch (Exception e) {
 
-            }*/
-        //}
-    }
+        }
 }
+
