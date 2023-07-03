@@ -47,6 +47,7 @@ public class Hotel extends Participant {
                     availableRoomIds.add(rs.getString("roomId"));
                 }
             }
+            //denkfehler!
             String availableRoomsIds = "";
             for (int i = 0; i < availableRoomIds.size(); i++) {
                 if( i < availableRoomIds.size() - 1){
