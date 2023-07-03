@@ -43,11 +43,11 @@ public class Hotel extends Participant {
             while(rs.next()){
                 LocalDate startDateEntry = LocalDate.parse(rs.getString("startDate"));
                 LocalDate endDateEntry = LocalDate.parse(rs.getString("endDate"));
-                if (startDateEntry.isAfter(endDate) | endDateEntry.isBefore(startDate)) {
+                if (!(startDateEntry.isAfter(endDate) | endDateEntry.isBefore(startDate))) {
                     availableRoomIds.add(rs.getString("roomId"));
                 }
             }
-            //denkfehler!
+
             String availableRoomsIds = "";
             for (int i = 0; i < availableRoomIds.size(); i++) {
                 if( i < availableRoomIds.size() - 1){
@@ -57,7 +57,7 @@ public class Hotel extends Participant {
                 }
             }
 
-            stm = con.prepareStatement("SELECT * FROM room WHERE id IN (?)");
+            stm = con.prepareStatement("SELECT * FROM room WHERE id IS NOT IN (?)");
             stm.setString(1, availableRoomsIds);
             rs = stm.executeQuery();
             ArrayList<Room> availableRooms = new ArrayList<>();
