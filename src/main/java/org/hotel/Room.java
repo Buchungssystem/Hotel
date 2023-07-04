@@ -9,13 +9,10 @@ public class Room {
     @JsonProperty("name")
     private String name;
 
-    @JsonProperty("price")
-    private double price;
 
-    public Room(int pId, String pName, double pPrice){
+    public Room(int pId, String pName){
         id = pId;
         name = pName;
-        price = pPrice;
     }
 
     public int getId() {
@@ -32,13 +29,5 @@ public class Room {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public double getPrice() {
-        return price;
-    }
-
-    public void setPrice(double price) {
-        this.price = price;
     }
 }
