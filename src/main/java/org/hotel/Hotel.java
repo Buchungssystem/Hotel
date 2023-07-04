@@ -56,7 +56,7 @@ public class Hotel extends Participant {
             stm = con.prepareStatement("SELECT * FROM room WHERE id IS NOT IN (?)");
             stm.setString(1, availableRoomsIds);
             rs = stm.executeQuery();
-            ArrayList<Room> availableRooms = new ArrayList<>();
+            ArrayList<Object> availableRooms = new ArrayList<>();
             while(rs.next()){
                 availableRooms.add(new Room(rs.getInt("id"), rs.getString("name")));
             }
