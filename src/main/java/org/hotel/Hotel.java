@@ -1,10 +1,7 @@
 package org.hotel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.utils.Operations;
-import org.utils.Participant;
-import org.utils.SendingInformation;
-import org.utils.UDPMessage;
+import org.utils.*;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -22,7 +19,7 @@ public class Hotel extends Participant {
 
     @Override
     public byte[] book(LocalDate startDate, LocalDate endDate) {
-
+        return new byte[0];
     }
 
 
@@ -53,7 +50,7 @@ public class Hotel extends Participant {
                 }
             }
 
-            stm = con.prepareStatement("SELECT * FROM room WHERE id IS NOT IN (?)");
+            stm = con.prepareStatement("SELECT * FROM room WHERE id NOT IN (?)");
             stm.setString(1, availableRoomsIds);
             rs = stm.executeQuery();
             ArrayList<Object> availableRooms = new ArrayList<>();
