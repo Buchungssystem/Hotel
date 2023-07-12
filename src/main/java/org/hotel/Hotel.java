@@ -5,6 +5,7 @@ import com.mysql.cj.x.protobuf.MysqlxPrepare;
 import org.utils.*;
 
 import javax.xml.crypto.Data;
+import java.net.DatagramSocket;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -13,6 +14,17 @@ import java.util.ArrayList;
 import java.util.UUID;
 
 public class Hotel extends Participant {
+
+    public DatagramSocket dgSocket;
+
+    public Hotel() {
+        try {
+            dgSocket = new DatagramSocket(Participant.hotelPort);
+        } catch(Exception e){
+            System.out.println("Socket was not set: " + e.getMessage());
+        }
+    }
+
     @Override
     public Operations prepare(BookingData bookingData, UUID transaktionId) {
         DatabaseConnection dbConn = new DatabaseConnection();
@@ -55,7 +67,7 @@ public class Hotel extends Participant {
     public boolean commit(UUID transaktionId){
         DatabaseConnection dbConn = new DatabaseConnection();
         try(Connection con = dbConn.getConn()){
-            PreparedStatement stm = con.prepareStatement("UPDATE booking SET stable = 1 WHERE id = \"" + transaktionId + "\"");
+            PreparedStatement stm = con.prepareStatement("UPDATE booking SET stable = 1 WHERE bookingID = \"" + transaktionId + "\"");
             System.out.println("UPDATE booking SET stable = 1 WHERE id = \"" + transaktionId + "\"");
             stm.executeUpdate();
             return true;
@@ -69,8 +81,10 @@ public class Hotel extends Participant {
     public boolean abort(UUID transaktionId){
         DatabaseConnection dbConn = new DatabaseConnection();
         try(Connection con = dbConn.getConn()){
-            PreparedStatement stm = con.prepareStatement("DELETE FROM booking WHERE id = \"" + transaktionId + "\"");
-            stm.executeQuery();
+            String s = "DELETE FROM booking WHERE bookingID = \"" + transaktionId + "\"";
+            System.out.println(s);
+            PreparedStatement stm = con.prepareStatement(s);
+            stm.executeUpdate();
             return true;
         }catch(Exception e){
             System.out.println("des kann jetzt nicht Wahrsteiner im Abort?");
@@ -106,12 +120,12 @@ public class Hotel extends Participant {
                 }
             }
 
-            stm = con.prepareStatement("SELECT * FROM room WHERE id NOT IN (?)");
+            stm = con.prepareStatement("SELECT * FROM room WHERE roomID NOT IN (?)");
             stm.setString(1, availableRoomsIds);
             rs = stm.executeQuery();
             ArrayList<Object> availableRooms = new ArrayList<>();
             while(rs.next()){
-                availableRooms.add(new Room(rs.getInt("id"), rs.getString("name")));
+                availableRooms.add(new Room(rs.getInt("roomID"), rs.getString("name")));
             }
 
             return availableRooms;

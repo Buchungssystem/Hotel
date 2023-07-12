@@ -1,1 +1,4 @@
-org\hotel\Hotel.class
+org/hotel/DatabaseConnection.class
+org/hotel/Execute$1.class
+org/hotel/Hotel.class
+org/hotel/Execute.class

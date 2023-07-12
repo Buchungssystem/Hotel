@@ -28,7 +28,7 @@ public class Execute {
         h.getAvailableItems(startDate, endDate);
 
         while (true) {
-            try (DatagramSocket dgSocket = new DatagramSocket(Participant.hotelPort)) {
+            try {
                 //byte data of UDP message
                 byte[] messageData;
 
@@ -41,7 +41,7 @@ public class Execute {
                 UDPMessage responeseMessage;
 
                 System.out.println("Listening on Port " + Participant.hotelPort);
-                dgSocket.receive(dgPacketIn);
+                h.dgSocket.receive(dgPacketIn);
                 System.out.println("recieved aber trd im arsch: ");
 
                 //string data to parse it into Objects
@@ -64,7 +64,7 @@ public class Execute {
                         messageData = objectMapper.writeValueAsBytes(responeseMessage);
                         DatagramPacket dgOutPrepare = new DatagramPacket(messageData, messageData.length, Participant.localhost, Participant.travelBrokerPort);
 
-                        dgSocket.send(dgOutPrepare);
+                        h.dgSocket.send(dgOutPrepare);
                         System.out.println("prepare answered: " + response);
                     }
                     case COMMIT -> {
@@ -74,7 +74,7 @@ public class Execute {
                             parsedMessage = objectMapper.writeValueAsBytes(responeseMessage);
                             DatagramPacket dgOutCommit = new DatagramPacket(parsedMessage, parsedMessage.length, Participant.localhost, Participant.travelBrokerPort);
 
-                            dgSocket.send(dgOutCommit);
+                            h.dgSocket.send(dgOutCommit);
                             System.out.println("commit answered - Ok");
                         }
                     }
@@ -85,7 +85,7 @@ public class Execute {
                             parsedMessage = objectMapper.writeValueAsBytes(responeseMessage);
                             DatagramPacket dgOutAbort = new DatagramPacket(parsedMessage, parsedMessage.length, Participant.localhost, Participant.travelBrokerPort);
 
-                            dgSocket.send(dgOutAbort);
+                            h.dgSocket.send(dgOutAbort);
                             System.out.println("abort answered - OK");
                         }
                     }
@@ -101,7 +101,7 @@ public class Execute {
                             parsedMessage = objectMapper.writeValueAsBytes(responseMessage);
                             //Datagrampacket for sending the response
                             DatagramPacket dgOutAvailability= new DatagramPacket(parsedMessage, parsedMessage.length, h.localhost, h.travelBrokerPort);
-                            dgSocket.send(dgOutAvailability);
+                            h.dgSocket.send(dgOutAvailability);
 
                         }
                     }
