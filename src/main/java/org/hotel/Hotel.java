@@ -12,16 +12,20 @@ import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Hotel extends Participant {
 
     public DatagramSocket dgSocket;
 
+    private final static Logger LOGGER = Logger.getLogger(Execute.class.getName());
+
     public Hotel() {
         try {
             dgSocket = new DatagramSocket(Participant.hotelPort);
         } catch(Exception e){
-            System.out.println("Socket was not set: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Socket was not set", e);
         }
     }
 
@@ -38,26 +42,28 @@ public class Hotel extends Participant {
             PreparedStatement stm = con.prepareStatement("SELECT * FROM booking");
             ResultSet rs = stm.executeQuery();
 
+            //loop through responded table and check if rooms are available or not
             while (rs.next()) {
                 if(rs.getInt("roomId") == requestedId){
                     LocalDate startDateEntry = LocalDate.parse(rs.getString("startDate"));
                     LocalDate endDateEntry = LocalDate.parse(rs.getString("endDate"));
                     if (!isAvailable(startDate, endDate, startDateEntry, endDateEntry)) {
+                        //if not available return abort
                         return Operations.ABORT;
                     }
 
                 }
             }
+
             //Room is available
             String query = "INSERT INTO booking VALUES (\"" + transaktionId + "\", \"" + startDate + "\", \"" + endDate + "\", 0, " + requestedId + ")";
             System.out.println(query);
             stm = con.prepareStatement(query);
             stm.executeUpdate();
-            System.out.println("successfully booked");
 
             return Operations.READY;
         }catch (Exception e){
-            System.out.println("kapput");
+            LOGGER.log(Level.SEVERE, "Something went wrong with the database connection", e);
             return Operations.ABORT;
         }
 
@@ -68,11 +74,12 @@ public class Hotel extends Participant {
         DatabaseConnection dbConn = new DatabaseConnection();
         try(Connection con = dbConn.getConn()){
             PreparedStatement stm = con.prepareStatement("UPDATE booking SET stable = 1 WHERE bookingID = \"" + transaktionId + "\"");
-            System.out.println("UPDATE booking SET stable = 1 WHERE id = \"" + transaktionId + "\"");
             stm.executeUpdate();
+            //return true since the statement was successfully
             return true;
         }catch(Exception e){
-            System.out.println("des kann jetzt nicht Wahrsteiner im Commit?: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Something went wrong with the database connection", e);
+            //return false since the transaction wasn't succesfully set stable
             return false;
         }
     }
@@ -82,12 +89,13 @@ public class Hotel extends Participant {
         DatabaseConnection dbConn = new DatabaseConnection();
         try(Connection con = dbConn.getConn()){
             String s = "DELETE FROM booking WHERE bookingID = \"" + transaktionId + "\"";
-            System.out.println(s);
             PreparedStatement stm = con.prepareStatement(s);
             stm.executeUpdate();
+            //return true since the statement was succesfully
             return true;
         }catch(Exception e){
-            System.out.println("des kann jetzt nicht Wahrsteiner im Abort?");
+            LOGGER.log(Level.SEVERE, "Something went wrong with the database connection", e);
+            //return false since the transaction wasn't succesfully aborted
             return false;
         }
     }
@@ -97,20 +105,22 @@ public class Hotel extends Participant {
     public ArrayList<Object> getAvailableItems(LocalDate startDate, LocalDate endDate) {
         DatabaseConnection dbConn = new DatabaseConnection();
         ArrayList<String> availableRoomIds = new ArrayList<>();
-        ResultSet rs = null;
-        UDPMessage udpMessage;
+        ResultSet rs;
         try(Connection con = dbConn.getConn()){
             PreparedStatement stm = con.prepareStatement("SELECT * FROM booking");
             rs = stm.executeQuery();
 
+            //loop through result table and check if rooms are available or not
             while(rs.next()){
                 LocalDate startDateEntry = LocalDate.parse(rs.getString("startDate"));
                 LocalDate endDateEntry = LocalDate.parse(rs.getString("endDate"));
                 if (!isAvailable(startDate, endDate, startDateEntry, endDateEntry)) {
+                    //add room if not available to exclude in query later
                     availableRoomIds.add(rs.getString("roomId"));
                 }
             }
 
+            //build string to be in right format for the sql query
             String availableRoomsIds = "";
             for (int i = 0; i < availableRoomIds.size(); i++) {
                 if( i < availableRoomIds.size() - 1){
@@ -121,9 +131,12 @@ public class Hotel extends Participant {
             }
 
             stm = con.prepareStatement("SELECT * FROM room WHERE roomID NOT IN (?)");
+            //append prepared string at the position of "?"
             stm.setString(1, availableRoomsIds);
             rs = stm.executeQuery();
             ArrayList<Object> availableRooms = new ArrayList<>();
+
+            //add all available rooms to returned table
             while(rs.next()){
                 availableRooms.add(new Room(rs.getInt("roomID"), rs.getString("name")));
             }
@@ -131,20 +144,18 @@ public class Hotel extends Participant {
             return availableRooms;
 
         }catch(Exception e){
-            System.out.println("An Error has occured: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Something went wrong with the database connection", e);
+            //return null since there couldn't be any rooms selected
             return null;
         }
     }
 
+    //method for comparing two timeframes
     public boolean isAvailable(LocalDate startDate, LocalDate endDate, LocalDate startDateEntry, LocalDate endDateEntry){
         if (startDateEntry.isAfter(endDate) | endDateEntry.isBefore(startDate)) {
             return true;
         }
         return false;
     }
-
-    public static void main(String[] args) {
-
-        }
 }
 
