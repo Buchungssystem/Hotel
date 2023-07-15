@@ -30,7 +30,7 @@ public class Hotel extends Participant {
     }
 
     @Override
-    public Operations prepare(BookingData bookingData, UUID transaktionId) {
+    public Operations prepare(BookingData bookingData, UUID transactionId) {
         DatabaseConnection dbConn = new DatabaseConnection();
         LocalDate startDate = bookingData.getStartDate();
         LocalDate endDate = bookingData.getEndDate();
@@ -56,8 +56,7 @@ public class Hotel extends Participant {
             }
 
             //Room is available
-            String query = "INSERT INTO booking VALUES (\"" + transaktionId + "\", \"" + startDate + "\", \"" + endDate + "\", 0, " + requestedId + ")";
-            System.out.println(query);
+            String query = "INSERT INTO booking VALUES (\"" + transactionId + "\", \"" + startDate + "\", \"" + endDate + "\", 0, " + requestedId + ")";
             stm = con.prepareStatement(query);
             stm.executeUpdate();
 
@@ -70,32 +69,32 @@ public class Hotel extends Participant {
     }
 
     @Override
-    public boolean commit(UUID transaktionId){
+    public boolean commit(UUID transactionId){
         DatabaseConnection dbConn = new DatabaseConnection();
         try(Connection con = dbConn.getConn()){
-            PreparedStatement stm = con.prepareStatement("UPDATE booking SET stable = 1 WHERE bookingID = \"" + transaktionId + "\"");
+            PreparedStatement stm = con.prepareStatement("UPDATE booking SET stable = 1 WHERE bookingID = \"" + transactionId + "\"");
             stm.executeUpdate();
-            //return true since the statement was successfully
+            //return true since the statement was successful
             return true;
         }catch(Exception e){
             LOGGER.log(Level.SEVERE, "Something went wrong with the database connection", e);
-            //return false since the transaction wasn't succesfully set stable
+            //return false since the transaction wasn't successful set stable
             return false;
         }
     }
 
     @Override
-    public boolean abort(UUID transaktionId){
+    public boolean abort(UUID transactionId){
         DatabaseConnection dbConn = new DatabaseConnection();
         try(Connection con = dbConn.getConn()){
-            String s = "DELETE FROM booking WHERE bookingID = \"" + transaktionId + "\"";
+            String s = "DELETE FROM booking WHERE bookingID = \"" + transactionId + "\"";
             PreparedStatement stm = con.prepareStatement(s);
             stm.executeUpdate();
-            //return true since the statement was succesfully
+            //return true since the statement was successful
             return true;
         }catch(Exception e){
             LOGGER.log(Level.SEVERE, "Something went wrong with the database connection", e);
-            //return false since the transaction wasn't succesfully aborted
+            //return false since the transaction wasn't successful aborted
             return false;
         }
     }

@@ -45,10 +45,10 @@ public class Execute {
                 //byte UDP Message
                 byte [] parsedMessage;
                 byte[] buffer = new byte[65507];
-                //DatagramPacket for recieving data
+                //DatagramPacket for receiving data
                 DatagramPacket dgPacketIn = new DatagramPacket(buffer, buffer.length);
                 //response UDPMessage
-                UDPMessage responeseMessage;
+                UDPMessage responseMessage;
 
                 LOGGER.log(Level.INFO, "Hotel listening on Port: " + Participant.hotelPort);
                 h.dgSocket.receive(dgPacketIn);
@@ -58,7 +58,7 @@ public class Execute {
                 //parsed UDP message
                 UDPMessage dataObject = objectMapper.readValue(data, UDPMessage.class);
 
-                //store TransaktionID for context on further processing
+                //store TransactionID for context on further processing
                 UUID transactionId = dataObject.getTransaktionNumber();
 
                 //store originPort of the requesting travelBroker
@@ -66,24 +66,24 @@ public class Execute {
 
                 switch (dataObject.getOperation()){
                     case PREPARE -> {
-                        //log prepare recieved but not answered
+                        //log prepare received but not answered
                         transactionContext = new TransactionContext(States.PREPARE, originPort, false);
                         logWriter.write(transactionId, transactionContext);
                         transactionContextMap.put(transactionId, transactionContext);
 
                         LOGGER.log(Level.INFO, "2PC: Prepare - " + transactionId);
 
-                        //get Data of Message
+                        //get data of message
                         messageData = dataObject.getData();
                         data = new String(messageData, 0, messageData.length);
                         BookingData bookingData = objectMapper.readValue(data, BookingData.class);
 
                         //run actual prepare and safe the response (Commit or Abort)
                         Operations response = h.prepare(bookingData, dataObject.getTransaktionNumber());
-                        responeseMessage = new UDPMessage(dataObject.getTransaktionNumber(), SendingInformation.HOTEL, response);
+                        responseMessage = new UDPMessage(dataObject.getTransaktionNumber(), SendingInformation.HOTEL, response);
 
                         //send response back to corresponding TravelBroker instance
-                        messageData = objectMapper.writeValueAsBytes(responeseMessage);
+                        messageData = objectMapper.writeValueAsBytes(responseMessage);
                         DatagramPacket dgOutPrepare = new DatagramPacket(messageData, messageData.length, Participant.localhost, originPort);
 
                         h.dgSocket.send(dgOutPrepare);
@@ -94,18 +94,18 @@ public class Execute {
                         transactionContextMap.put(transactionId, transactionContext);
                     }
                     case COMMIT -> {
-                        //log commit recieved but not answered
+                        //log commit received but not answered
                         transactionContext = new TransactionContext(States.COMMIT, originPort, false);
                         logWriter.write(transactionId, transactionContext);
                         transactionContextMap.put(transactionId, transactionContext);
 
                         LOGGER.log(Level.INFO, "2PC: Commit - " + transactionId);
 
-                        //run actual commit and check if transaction was completed successfully if not, no answer is send
+                        //run actual commit and check if transaction was completed successfully if not, no answer will be sent
                         if(h.commit(dataObject.getTransaktionNumber())) {
                             //create and parse response
-                            responeseMessage = new UDPMessage(dataObject.getTransaktionNumber(), SendingInformation.HOTEL, Operations.OK);
-                            parsedMessage = objectMapper.writeValueAsBytes(responeseMessage);
+                            responseMessage = new UDPMessage(dataObject.getTransaktionNumber(), SendingInformation.HOTEL, Operations.OK);
+                            parsedMessage = objectMapper.writeValueAsBytes(responseMessage);
 
                             //send response to corresponding travelBroker instance
                             DatagramPacket dgOutCommit = new DatagramPacket(parsedMessage, parsedMessage.length, Participant.localhost, originPort);
@@ -128,8 +128,8 @@ public class Execute {
                         //run actual abort and check if aborted successfully
                         if(h.abort(dataObject.getTransaktionNumber())){
                             //prepare answer
-                            responeseMessage = new UDPMessage(dataObject.getTransaktionNumber(), SendingInformation.HOTEL, Operations.OK);
-                            parsedMessage = objectMapper.writeValueAsBytes(responeseMessage);
+                            responseMessage = new UDPMessage(dataObject.getTransaktionNumber(), SendingInformation.HOTEL, Operations.OK);
+                            parsedMessage = objectMapper.writeValueAsBytes(responseMessage);
 
                             //send response to corresponding travelBroker instance
                             DatagramPacket dgOutAbort = new DatagramPacket(parsedMessage, parsedMessage.length, Participant.localhost, originPort);
@@ -148,13 +148,13 @@ public class Execute {
                         messageData = dataObject.getData();
                         AvailabilityData availabilityData = objectMapper.readValue(messageData, AvailabilityData.class);
 
-                        //run actual availability check with requestet params and store available Rooms
+                        //run actual availability check with requested params and store available Rooms
                         ArrayList<Object> availableItems = h.getAvailableItems(availabilityData.getStartDate(), availabilityData.getEndDate());
 
                         //if rooms not null prepare data and send answer
                         if(!(availableItems == null)){
                             byte[] parsedItems = objectMapper.writeValueAsBytes(availableItems);
-                            UDPMessage responseMessage = new UDPMessage(dataObject.getTransaktionNumber(), parsedItems, SendingInformation.HOTEL, Operations.AVAILIBILITY, Participant.hotelPort);
+                            responseMessage = new UDPMessage(dataObject.getTransaktionNumber(), parsedItems, SendingInformation.HOTEL, Operations.AVAILIBILITY, Participant.hotelPort);
                             parsedMessage = objectMapper.writeValueAsBytes(responseMessage);
 
                             //send response to corresponding travelBroker instance
