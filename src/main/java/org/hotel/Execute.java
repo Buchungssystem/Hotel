@@ -124,22 +124,29 @@ public class Execute {
                         transactionContextMap.put(transactionId, transactionContext);
 
                         LOGGER.log(Level.INFO, "2PC: Abort - " + transactionId);
+                        transactionContext = transactionContextMap.get(transactionId);
 
-                        //run actual abort and check if aborted successfully
-                        if(h.abort(dataObject.getTransaktionNumber())){
-                            //prepare answer
-                            responseMessage = new UDPMessage(dataObject.getTransaktionNumber(), SendingInformation.HOTEL, Operations.OK);
-                            parsedMessage = objectMapper.writeValueAsBytes(responseMessage);
+                        //check if there is an transaction Context because we already send a abort if received from one participant.
+                        //there could be a chance that this participant also returned abort to the prepare request which would lead to no entry for this transactionID
+                        //in our transaction ContextMap
+                        if(transactionContext != null){
+                            //run actual abort and check if aborted successfully
+                            if(h.abort(dataObject.getTransaktionNumber())){
+                                //prepare answer
+                                responseMessage = new UDPMessage(dataObject.getTransaktionNumber(), SendingInformation.HOTEL, Operations.OK);
+                                parsedMessage = objectMapper.writeValueAsBytes(responseMessage);
 
-                            //send response to corresponding travelBroker instance
-                            DatagramPacket dgOutAbort = new DatagramPacket(parsedMessage, parsedMessage.length, Participant.localhost, originPort);
-                            h.dgSocket.send(dgOutAbort);
+                                //send response to corresponding travelBroker instance
+                                DatagramPacket dgOutAbort = new DatagramPacket(parsedMessage, parsedMessage.length, Participant.localhost, originPort);
+                                h.dgSocket.send(dgOutAbort);
 
-                            //log abort answered
-                            transactionContext = new TransactionContext(States.ABORT, originPort, true);
-                            logWriter.write(transactionId, transactionContext);
-                            transactionContextMap.put(transactionId, transactionContext);
+                                //log abort answered
+                                transactionContext = new TransactionContext(States.ABORT, originPort, true);
+                                logWriter.write(transactionId, transactionContext);
+                                transactionContextMap.put(transactionId, transactionContext);
+                            }
                         }
+
                     }
                     case AVAILIBILITY -> {
                         LOGGER.log(Level.INFO, "Availability: request from travelBroker");
