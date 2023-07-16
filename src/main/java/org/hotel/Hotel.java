@@ -156,5 +156,30 @@ public class Hotel extends Participant {
         }
         return false;
     }
+
+    public Operations requestDecision(UUID transactionId) {
+        DatabaseConnection dbConn = new DatabaseConnection();
+
+        try(Connection con = dbConn.getConn()){
+            PreparedStatement stm = con.prepareStatement("SELECT stable FROM booking WHERE bookingID = \"" + transactionId + "\"");
+            ResultSet rs = stm.executeQuery();
+            if(!rs.next()){
+                return null;
+            }
+
+            int stable = rs.getInt("stable");
+            if(stable == 1){
+                // return commit since transaction has been set to stable
+                return Operations.COMMIT;
+            }else{
+                // return prepare since we also only received prepare and got no response from it
+                return Operations.PREPARE;
+            }
+
+        }catch(Exception e){
+            LOGGER.log(Level.SEVERE, "Something went wrong with the database connection", e);
+            return Operations.PREPARE;
+        }
+    }
 }
 
